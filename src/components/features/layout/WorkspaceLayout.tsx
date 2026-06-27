@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Sidebar } from '@/components/features/Sidebar';
-import { Header } from '@/components/features/Header';
-import { Breadcrumbs } from '@/components/features/Breadcrumbs';
+import { Sidebar } from '@/components/features/layout/Sidebar';
+import { Header } from '@/components/features/layout/Header';
+import { Breadcrumbs } from '@/components/features/nodes/Breadcrumbs';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Modal } from '@/components/ui/Modal';
 
