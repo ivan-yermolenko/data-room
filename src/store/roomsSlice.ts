@@ -15,7 +15,7 @@ export interface RoomsSlice {
 
 export const createDefaultRoom = (): Dataroom => ({
   id: generateUUID(),
-  name: 'room',
+  name: 'Default Room',
   createdAt: Date.now(),
 });
 
