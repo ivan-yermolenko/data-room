@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 /**
  * Custom hook to reactively check if the current screen width is below a mobile breakpoint.
  * Uses window.matchMedia for optimal performance.
- * 
+ *
  * @param breakpoint Breakpoint width in pixels (defaults to 768px matching Tailwind's md breakpoint)
  * @returns boolean true if screen size matches mobile layout
  */
@@ -20,7 +20,6 @@ export const useIsMobile = (breakpoint = 768): boolean => {
       setIsMobile(event.matches);
     };
 
-    // Modern browsers support addEventListener
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', handleMediaQueryChange);
     } else {
