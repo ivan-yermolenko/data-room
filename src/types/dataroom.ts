@@ -4,7 +4,12 @@ export interface Dataroom {
   createdAt: number;
 }
 
-export type NodeType = 'folder' | 'file';
+export const NodeType = {
+  FOLDER: 'folder',
+  FILE: 'file',
+} as const;
+
+export type NodeType = typeof NodeType[keyof typeof NodeType];
 
 export interface DataNode {
   id: string;
