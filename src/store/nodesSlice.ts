@@ -3,6 +3,7 @@ import type { DataroomStore } from './useDataroomStore';
 import { NodeType, type DataNode } from '@/types/dataroom';
 import { dbService } from '@/services/db';
 import { generateUUID } from '@/utils/uuid';
+import { sentryService } from '@/services/sentry';
 
 export interface NodesSlice {
   nodes: DataNode[];
@@ -89,8 +90,8 @@ export const createNodesSlice: StateCreator<
         nodes: updatedNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to create folder:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to create folder', folderName: trimmedName, parentId: currentFolderId });
       set({ error: 'Failed to create folder', loading: false });
     }
   },
@@ -126,8 +127,8 @@ export const createNodesSlice: StateCreator<
         nodes: updatedNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to upload file:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to upload file', fileName: sanitizedName, size, mimeType });
       set({ error: 'Failed to upload file', loading: false });
     }
   },
@@ -162,8 +163,8 @@ export const createNodesSlice: StateCreator<
         nodes: updatedNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to rename item:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to rename item', nodeId, newName: trimmedName });
       set({ error: 'Failed to rename item', loading: false });
     }
   },
@@ -188,8 +189,8 @@ export const createNodesSlice: StateCreator<
         currentFolderId: nextFolderId,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to delete item:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to delete item', nodeId });
       set({ error: 'Failed to delete item', loading: false });
     }
   },

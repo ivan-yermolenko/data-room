@@ -3,6 +3,7 @@ import type { DataroomStore } from './useDataroomStore';
 import type { Dataroom } from '@/types/dataroom';
 import { dbService } from '@/services/db';
 import { generateUUID } from '@/utils/uuid';
+import { sentryService } from '@/services/sentry';
 
 export interface RoomsSlice {
   rooms: Dataroom[];
@@ -37,8 +38,8 @@ export const createRoomsSlice: StateCreator<
         nodes: roomNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to switch rooms:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to switch rooms', roomId });
       set({ error: 'Failed to load room data', loading: false });
     }
   },
@@ -61,8 +62,8 @@ export const createRoomsSlice: StateCreator<
         rooms: dbRooms,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to create room:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to create room', roomName: trimmedName });
       set({ error: 'Failed to create room', loading: false });
     }
   },
@@ -98,8 +99,8 @@ export const createRoomsSlice: StateCreator<
         nodes: nextNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to delete room:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to delete room', roomId });
       set({ error: 'Failed to delete room', loading: false });
     }
   },

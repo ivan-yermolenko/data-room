@@ -1,4 +1,5 @@
 import type { Dataroom, DataNode } from '@/types/dataroom';
+import { sentryService } from '@/services/sentry';
 
 const DB_NAME = 'dataroom-db';
 const DB_VERSION = 1;
@@ -17,7 +18,7 @@ class DataroomDB {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('Failed to open IndexedDB:', request.error);
+        sentryService.captureException(request.error, { message: 'Failed to open IndexedDB' });
         this.initPromise = null;
         reject(request.error);
       };

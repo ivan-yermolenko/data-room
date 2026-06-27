@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { dbService } from '@/services/db';
 import { createRoomsSlice, type RoomsSlice, createDefaultRoom } from './roomsSlice';
 import { createNodesSlice, type NodesSlice } from './nodesSlice';
+import { sentryService } from '@/services/sentry';
 
 export type DataroomStore = RoomsSlice & NodesSlice & {
   loading: boolean;
@@ -38,8 +39,8 @@ export const useDataroomStore = create<DataroomStore>()((set, get, ...args) => (
         nodes: roomNodes,
         loading: false,
       });
-    } catch (err) {
-      console.error('Failed to initialize Dataroom store:', err);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to initialize Dataroom store' });
       set({ error: 'Failed to initialize storage', loading: false });
     }
   },
