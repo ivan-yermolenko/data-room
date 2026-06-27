@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
-import { FolderOpen, FileText, Loader2 } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
+import { FolderOpen, FileText, Loader2, FileUp } from 'lucide-react';
 import { NodeType, type DataNode, type FilterType, type SortByType } from '@/types/dataroom';
 import { NodeCard } from './NodeCard';
 import { NodeContextMenu } from './NodeContextMenu';
 import { NodeFilters } from './NodeFilters';
 import { sortNodes } from '@/utils/nodeSorting';
+import { preventDefaults } from '@/utils/nodeHelpers';
 
 interface NodeGridProps {
   nodes: DataNode[];
@@ -14,6 +15,9 @@ interface NodeGridProps {
   onNodeOpen: (node: DataNode) => void;
   onRenameClick: (node: DataNode) => void;
   onDeleteClick: (node: DataNode) => void;
+  onMoveClick: (node: DataNode) => void;
+  onMoveNode: (nodeId: string, targetParentId: string | null) => Promise<void>;
+  onUploadFiles: (files: FileList) => void;
 }
 
 interface ContextMenuState {
@@ -30,10 +34,46 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
   onNodeOpen,
   onRenameClick,
   onDeleteClick,
+  onMoveClick,
+  onMoveNode,
+  onUploadFiles,
 }) => {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [filterType, setFilterType] = useState<FilterType>('all');
   const [sortBy, setSortBy] = useState<SortByType>('name-asc');
+
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    preventDefaults(e);
+    if (e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+      dragCounter.current++;
+      setIsDraggingFiles(true);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    preventDefaults(e);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    preventDefaults(e);
+    dragCounter.current--;
+    if (dragCounter.current <= 0) {
+      setIsDraggingFiles(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    preventDefaults(e);
+    setIsDraggingFiles(false);
+    dragCounter.current = 0;
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      onUploadFiles(e.dataTransfer.files);
+    }
+  };
 
   const isSearching = searchQuery.trim().length > 0;
   const lowercaseQuery = searchQuery.toLowerCase();
@@ -77,7 +117,28 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-full select-none relative">
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="flex flex-col h-full select-none relative min-h-[300px]"
+    >
+      {/* Drag and Drop File Upload Overlay */}
+      {isDraggingFiles && (
+        <div
+          className="absolute inset-0 bg-background/80 backdrop-blur-md border-2 border-dashed border-primary/50 rounded-2xl flex flex-col items-center justify-center gap-4 z-50 animate-in fade-in duration-150 pointer-events-none"
+        >
+          <div className="h-16 w-16 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+            <FileUp className="h-8 w-8 animate-bounce" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-foreground">Drop PDF files here to upload</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Will be uploaded to the current directory</p>
+          </div>
+        </div>
+      )}
+
       <NodeFilters
         filterType={filterType}
         onFilterTypeChange={setFilterType}
@@ -138,6 +199,7 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
                     node={node}
                     onOpen={onNodeOpen}
                     onContextMenu={handleContextMenu}
+                    onMoveNode={onMoveNode}
                     isSelected={contextMenu?.node.id === node.id}
                   />
                 ))}
@@ -158,6 +220,7 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
                     node={node}
                     onOpen={onNodeOpen}
                     onContextMenu={handleContextMenu}
+                    onMoveNode={onMoveNode}
                     isSelected={contextMenu?.node.id === node.id}
                   />
                 ))}
@@ -174,6 +237,7 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
                   node={node}
                   onOpen={onNodeOpen}
                   onContextMenu={handleContextMenu}
+                  onMoveNode={onMoveNode}
                   isSelected={contextMenu?.node.id === node.id}
                 />
               ))}
@@ -182,6 +246,7 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
         </div>
       )}
 
+      {/* Context Menu Overlay */}
       {contextMenu && (
         <NodeContextMenu
           x={contextMenu.x}
@@ -190,6 +255,7 @@ export const NodeGrid: React.FC<NodeGridProps> = ({
           onClose={handleCloseContextMenu}
           onRename={onRenameClick}
           onDelete={onDeleteClick}
+          onMove={onMoveClick}
         />
       )}
     </div>

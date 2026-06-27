@@ -4,6 +4,7 @@ import { NodeType, type DataNode } from '@/types/dataroom';
 import { dbService } from '@/services/db';
 import { generateUUID } from '@/utils/uuid';
 import { sentryService } from '@/services/sentry';
+import { isDescendant } from '@/utils/nodeHelpers';
 
 export interface NodesSlice {
   nodes: DataNode[];
@@ -13,6 +14,8 @@ export interface NodesSlice {
   uploadFile: (name: string, fileData: Blob, mimeType: string, size: number) => Promise<void>;
   updateNodeName: (nodeId: string, newName: string) => Promise<void>;
   deleteNode: (nodeId: string) => Promise<void>;
+  moveNode: (nodeId: string, targetParentId: string | null) => Promise<void>;
+  uploadMultipleFiles: (files: FileList) => Promise<void>;
 }
 
 const resolveUniqueName = (
@@ -47,6 +50,8 @@ const resolveUniqueName = (
 
   return newName;
 };
+
+
 
 export const createNodesSlice: StateCreator<
   DataroomStore,
@@ -192,6 +197,75 @@ export const createNodesSlice: StateCreator<
     } catch (error) {
       sentryService.captureException(error, { message: 'Failed to delete item', nodeId });
       set({ error: 'Failed to delete item', loading: false });
+    }
+  },
+
+  moveNode: async (nodeId, targetParentId) => {
+    const { currentRoomId, nodes } = get();
+    if (!currentRoomId) return;
+
+    if (nodeId === targetParentId) {
+      throw new Error('Cannot move an item inside itself.');
+    }
+
+    const sourceNode = nodes.find(n => n.id === nodeId);
+    if (!sourceNode) {
+      throw new Error('Source item not found.');
+    }
+
+    if (sourceNode.type === NodeType.FOLDER && isDescendant(nodes, nodeId, targetParentId)) {
+      throw new Error('Cannot move a folder inside its own subfolders.');
+    }
+
+    set({ loading: true, error: null });
+    try {
+      const targetName = resolveUniqueName(nodes, sourceNode.name, targetParentId, sourceNode.type);
+
+      const updatedNode: DataNode = {
+        ...sourceNode,
+        parentId: targetParentId,
+        name: targetName,
+        updatedAt: Date.now(),
+      };
+
+      await dbService.saveNode(updatedNode);
+      const updatedNodes = await dbService.getNodesByRoom(currentRoomId);
+
+      set({
+        nodes: updatedNodes,
+        loading: false,
+      });
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to move node', nodeId, targetParentId });
+      set({ error: 'Failed to move item', loading: false });
+      throw error;
+    }
+  },
+
+  uploadMultipleFiles: async (files) => {
+    const { uploadFile } = get();
+    let hasNonPdf = false;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        hasNonPdf = true;
+        continue;
+      }
+      try {
+        await uploadFile(file.name, file, file.type, file.size);
+      } catch (error) {
+        sentryService.captureException(error, { message: 'Failed to upload dropped file', fileName: file.name });
+      }
+    }
+
+    if (hasNonPdf) {
+      set({ error: 'Only PDF files are supported for upload.' });
+      setTimeout(() => {
+        if (get().error === 'Only PDF files are supported for upload.') {
+          set({ error: null });
+        }
+      }, 5000);
     }
   },
 });

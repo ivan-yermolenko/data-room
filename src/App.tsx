@@ -5,10 +5,14 @@ import { NodeGrid } from '@/components/features/nodes/NodeGrid';
 import { CreateFolderModal } from '@/components/features/nodes/modals/CreateFolderModal';
 import { RenameModal } from '@/components/features/nodes/modals/RenameModal';
 import { PdfPreviewModal } from '@/components/features/nodes/modals/PdfPreviewModal';
+import { MoveNodeModal } from '@/components/features/nodes/modals/MoveNodeModal';
 import { useDebounce } from '@/hooks/useDebounce';
+import { Alert } from '@/components/ui/Alert';
 import { sentryService } from '@/services/sentry';
 import { NodeType, type DataNode } from '@/types/dataroom';
 import { Loader2 } from 'lucide-react';
+
+type ActiveModalType = 'create-folder' | 'rename' | 'preview' | 'move' | null;
 
 function App() {
   const {
@@ -19,15 +23,16 @@ function App() {
     currentFolderId,
     nodes,
     createFolder,
-    uploadFile,
+    uploadMultipleFiles,
     updateNodeName,
     deleteNode,
+    moveNode,
     setCurrentFolder
   } = useDataroomStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
-  const [activeModal, setActiveModal] = useState<'create-folder' | 'rename' | 'preview' | null>(null);
+  const [activeModal, setActiveModal] = useState<ActiveModalType>(null);
   const [activeNode, setActiveNode] = useState<DataNode | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -112,21 +117,25 @@ function App() {
     fileInput.accept = '.pdf';
     fileInput.onchange = async (event) => {
       const target = event.target as HTMLInputElement;
-      const file = target.files?.[0];
-      if (file) {
-        try {
-          await uploadFile(
-            file.name,
-            file,
-            file.type,
-            file.size
-          );
-        } catch (error) {
-          sentryService.captureException(error, { message: 'Failed to upload file from App trigger', fileName: file.name });
-        }
+      if (target.files && target.files.length > 0) {
+        await uploadMultipleFiles(target.files);
       }
     };
     fileInput.click();
+  };
+
+  const handleMoveClick = (node: DataNode) => {
+    setActiveNode(node);
+    setActiveModal('move');
+  };
+
+  const handleMoveSubmit = async (targetParentId: string | null) => {
+    if (!activeNode) return;
+    try {
+      await moveNode(activeNode.id, targetParentId);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to move node from App submission', nodeId: activeNode.id, targetParentId });
+    }
   };
 
   if (loading && !currentRoomId) {
@@ -148,11 +157,7 @@ function App() {
       onUploadFileClick={handleUploadFileTrigger}
     >
       <div className="h-full flex flex-col p-1 select-none">
-        {error && (
-          <div className="mb-4 bg-destructive/10 text-destructive border border-destructive/20 rounded-xl px-4 py-2 text-sm shrink-0">
-            {error}
-          </div>
-        )}
+        {error && <Alert>{error}</Alert>}
 
         <div className="flex-1">
           <NodeGrid
@@ -163,6 +168,9 @@ function App() {
             onNodeOpen={handleNodeOpen}
             onRenameClick={handleRenameClick}
             onDeleteClick={handleDeleteClick}
+            onMoveClick={handleMoveClick}
+            onMoveNode={moveNode}
+            onUploadFiles={uploadMultipleFiles}
           />
         </div>
       </div>
@@ -187,6 +195,15 @@ function App() {
         onClose={handleCloseModal}
         node={activeNode}
         previewUrl={previewUrl}
+      />
+
+      <MoveNodeModal
+        key={activeNode ? `move-${activeNode.id}` : 'move-closed'}
+        isOpen={activeModal === 'move'}
+        onClose={handleCloseModal}
+        node={activeNode}
+        nodes={nodes}
+        onSubmit={handleMoveSubmit}
       />
     </WorkspaceLayout>
   );

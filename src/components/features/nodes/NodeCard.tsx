@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Folder, FileText, MoreVertical } from 'lucide-react';
 import { NodeType, type DataNode } from '@/types/dataroom';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -7,6 +7,7 @@ interface NodeCardProps {
   node: DataNode;
   onOpen: (node: DataNode) => void;
   onContextMenu: (node: DataNode, x: number, y: number) => void;
+  onMoveNode?: (nodeId: string, targetParentId: string | null) => void;
   isSelected?: boolean;
 }
 
@@ -14,10 +15,42 @@ export const NodeCard: React.FC<NodeCardProps> = ({
   node,
   onOpen,
   onContextMenu,
+  onMoveNode,
   isSelected = false,
 }) => {
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const isMobile = useIsMobile();
+  const [isDragHovered, setIsDragHovered] = useState(false);
+
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', node.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (node.type === NodeType.FOLDER) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setIsDragHovered(true);
+    }
+  };
+
+  const handleDragLeave = () => {
+    if (node.type === NodeType.FOLDER) {
+      setIsDragHovered(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (node.type === NodeType.FOLDER) {
+      e.preventDefault();
+      setIsDragHovered(false);
+      const draggedId = e.dataTransfer.getData('text/plain');
+      if (draggedId && draggedId !== node.id && onMoveNode) {
+        onMoveNode(draggedId, node.id);
+      }
+    }
+  };
 
   const handleDoubleClick = () => {
     onOpen(node);
@@ -67,12 +100,19 @@ export const NodeCard: React.FC<NodeCardProps> = ({
       onDoubleClick={handleDoubleClick}
       onKeyDown={handleKeyDown}
       onContextMenu={handleContextMenu}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
       tabIndex={0}
       role="button"
       aria-label={`${isFolder ? 'Folder' : 'File'} ${node.name}`}
       className={`group relative flex items-center justify-between p-4 bg-card border rounded-2xl transition-all select-none hover:shadow-md cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary ${
         isSelected
           ? 'border-primary bg-primary/5 ring-1 ring-primary'
+          : isDragHovered
+          ? 'border-primary/60 bg-primary/10 ring-2 ring-primary border-dashed shadow-sm'
           : 'border-border hover:border-muted-foreground/30'
       }`}
     >

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Folder } from 'lucide-react';
 import { type DataNode } from '@/types/dataroom';
 
 interface NodeContextMenuProps {
@@ -8,6 +8,7 @@ interface NodeContextMenuProps {
   onClose: () => void;
   onRename: (node: DataNode) => void;
   onDelete: (node: DataNode) => void;
+  onMove?: (node: DataNode) => void;
   node: DataNode;
 }
 
@@ -17,6 +18,7 @@ export const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
   onClose,
   onRename,
   onDelete,
+  onMove,
   node,
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
@@ -50,7 +52,7 @@ export const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
   }, [onClose]);
 
   const menuWidth = 160;
-  const menuHeight = 90;
+  const menuHeight = onMove ? 130 : 90;
   const adjustedX = Math.max(16, Math.min(x, window.innerWidth - menuWidth - 16));
   const adjustedY = Math.max(16, Math.min(y, window.innerHeight - menuHeight - 16));
 
@@ -72,7 +74,23 @@ export const NodeContextMenu: React.FC<NodeContextMenuProps> = ({
         <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
         <span>Rename</span>
       </button>
+
+      {onMove && (
+        <button
+          onClick={() => {
+            onMove(node);
+            onClose();
+          }}
+          role="menuitem"
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs hover:bg-accent text-left font-medium transition-colors cursor-pointer outline-none focus:bg-accent"
+        >
+          <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+          <span>Move to...</span>
+        </button>
+      )}
+
       <div className="h-px bg-border my-1" />
+
       <button
         onClick={() => {
           onDelete(node);
