@@ -19,7 +19,7 @@ npm run dev
 npm run build
 ```
 
-The app runs at `http://localhost:5173` (Vite default).
+The app runs at `http://localhost:3000` (as configured in Vite).
 
 ---
 
