@@ -159,6 +159,7 @@ function App() {
             nodes={nodes}
             currentFolderId={currentFolderId}
             searchQuery={debouncedSearchQuery}
+            isSearchingActive={searchQuery !== debouncedSearchQuery}
             onNodeOpen={handleNodeOpen}
             onRenameClick={handleRenameClick}
             onDeleteClick={handleDeleteClick}

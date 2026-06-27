@@ -23,3 +23,13 @@ export interface DataNode {
   mimeType?: string;
   fileData?: Blob; // stored in IndexedDB for files
 }
+
+export type FilterType = 'all' | 'folders' | 'files';
+
+export type SortByType = 
+  | 'name-asc' 
+  | 'name-desc' 
+  | 'date-newest' 
+  | 'date-oldest' 
+  | 'size-largest' 
+  | 'size-smallest';
