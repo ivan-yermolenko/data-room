@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useDataroomStore } from '@/store/useDataroomStore';
 import { FolderKanban, Plus, Trash2, FolderPlus, FileUp, X } from 'lucide-react';
 import { sentryService } from '@/services/sentry';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 
 interface SidebarProps {
   onNewFolderClick: () => void;
@@ -9,11 +10,17 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+interface PendingDeleteRoom {
+  id: string;
+  name: string;
+}
+
 export const Sidebar: React.FC<SidebarProps> = ({ onNewFolderClick, onUploadFileClick, onClose }) => {
   const { rooms, currentRoomId, setCurrentRoom, createRoom, deleteRoom } = useDataroomStore();
   const [newRoomName, setNewRoomName] = useState('');
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [pendingDeleteRoom, setPendingDeleteRoom] = useState<PendingDeleteRoom | null>(null);
 
   const handleCreateRoomSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,14 +34,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewFolderClick, onUploadFile
     setIsCreatingRoom(false);
   };
 
-  const handleDeleteRoomClick = async (roomId: string, roomName: string, e: React.MouseEvent) => {
+  const handleDeleteRoomClick = (roomId: string, roomName: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm(`Are you sure you want to delete room "${roomName}"? This will delete all its files and folders!`)) {
-      try {
-        await deleteRoom(roomId);
-      } catch (error) {
-        sentryService.captureException(error, { message: 'Failed to delete room from Sidebar', roomId, roomName });
-      }
+    setPendingDeleteRoom({ id: roomId, name: roomName });
+  };
+
+  const handleDeleteRoomConfirm = async () => {
+    if (!pendingDeleteRoom) return;
+    try {
+      await deleteRoom(pendingDeleteRoom.id);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to delete room from Sidebar', roomId: pendingDeleteRoom.id, roomName: pendingDeleteRoom.name });
+    } finally {
+      setPendingDeleteRoom(null);
     }
   };
 
@@ -50,7 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewFolderClick, onUploadFile
   };
 
   return (
-    <aside className="w-64 border-r border-border bg-card flex flex-col h-full text-foreground select-none">
+    <>
+      <aside className="w-64 border-r border-border bg-card flex flex-col h-full text-foreground select-none">
       <div className="h-16 border-b border-border flex items-center justify-between px-6 shrink-0">
         <div className="flex items-center gap-3">
           <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
@@ -187,5 +200,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onNewFolderClick, onUploadFile
         </div>
       </div>
     </aside>
+
+    <ConfirmModal
+      isOpen={pendingDeleteRoom !== null}
+      onClose={() => setPendingDeleteRoom(null)}
+      onConfirm={handleDeleteRoomConfirm}
+      title="Delete Data Room"
+      description={`Are you sure you want to delete room "${pendingDeleteRoom?.name}"? This will permanently delete all its files and folders and cannot be undone.`}
+      confirmLabel="Delete Room"
+      isDestructive
+    />
+  </>
   );
 };

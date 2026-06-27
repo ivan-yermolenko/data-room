@@ -6,6 +6,7 @@ import { CreateFolderModal } from '@/components/features/nodes/modals/CreateFold
 import { RenameModal } from '@/components/features/nodes/modals/RenameModal';
 import { PdfPreviewModal } from '@/components/features/nodes/modals/PdfPreviewModal';
 import { MoveNodeModal } from '@/components/features/nodes/modals/MoveNodeModal';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Alert } from '@/components/ui/Alert';
 import { sentryService } from '@/services/sentry';
@@ -35,6 +36,7 @@ function App() {
   const [activeModal, setActiveModal] = useState<ActiveModalType>(null);
   const [activeNode, setActiveNode] = useState<DataNode | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [pendingDeleteNode, setPendingDeleteNode] = useState<DataNode | null>(null);
 
   useEffect(() => {
     initStore().catch((error) => {
@@ -70,16 +72,18 @@ function App() {
     }
   };
 
-  const handleDeleteClick = async (node: DataNode) => {
-    const message = node.type === NodeType.FOLDER
-      ? `Are you sure you want to delete folder "${node.name}" and all its contents recursively?`
-      : `Are you sure you want to delete file "${node.name}"?`;
-    if (confirm(message)) {
-      try {
-        await deleteNode(node.id);
-      } catch (error) {
-        sentryService.captureException(error, { message: 'Failed to delete node', nodeId: node.id });
-      }
+  const handleDeleteClick = (node: DataNode) => {
+    setPendingDeleteNode(node);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!pendingDeleteNode) return;
+    try {
+      await deleteNode(pendingDeleteNode.id);
+    } catch (error) {
+      sentryService.captureException(error, { message: 'Failed to delete node', nodeId: pendingDeleteNode.id });
+    } finally {
+      setPendingDeleteNode(null);
     }
   };
 
@@ -204,6 +208,20 @@ function App() {
         node={activeNode}
         nodes={nodes}
         onSubmit={handleMoveSubmit}
+      />
+
+      <ConfirmModal
+        isOpen={pendingDeleteNode !== null}
+        onClose={() => setPendingDeleteNode(null)}
+        onConfirm={handleDeleteConfirm}
+        title={pendingDeleteNode?.type === NodeType.FOLDER ? 'Delete Folder' : 'Delete File'}
+        description={
+          pendingDeleteNode?.type === NodeType.FOLDER
+            ? `Are you sure you want to delete folder "${pendingDeleteNode.name}" and all its contents recursively? This cannot be undone.`
+            : `Are you sure you want to delete file "${pendingDeleteNode?.name}"? This cannot be undone.`
+        }
+        confirmLabel="Delete"
+        isDestructive
       />
     </WorkspaceLayout>
   );

@@ -17,17 +17,21 @@ export const RenameModal: React.FC<RenameModalProps> = ({
   onSubmit,
 }) => {
   const [renameInput, setRenameInput] = useState(node ? node.name : '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = renameInput.trim();
-    if (!trimmedName || !node) return;
+    if (!trimmedName || !node || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await onSubmit(trimmedName);
       onClose();
     } catch (error) {
       sentryService.captureException(error, { message: 'Failed to rename node from Modal submit', nodeId: node.id, newName: trimmedName });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -52,6 +56,7 @@ export const RenameModal: React.FC<RenameModalProps> = ({
             id="rename-node-name"
             type="text"
             required
+            autoFocus
             autoComplete="off"
             placeholder="Enter name"
             value={renameInput}
@@ -69,9 +74,10 @@ export const RenameModal: React.FC<RenameModalProps> = ({
           </button>
           <button
             type="submit"
-            className="px-5 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/95 transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="px-5 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/95 disabled:opacity-50 transition-colors cursor-pointer"
           >
-            Rename
+            {isSubmitting ? 'Renaming...' : 'Rename'}
           </button>
         </div>
       </form>

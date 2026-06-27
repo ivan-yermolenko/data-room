@@ -117,13 +117,6 @@ class DataroomDB {
     });
   }
 
-  public async getNodesByParent(roomId: string, parentId: string | null): Promise<DataNode[]> {
-    // Fetch all nodes in the room and filter by parentId in memory.
-    // This is simple, robust, handles parentId: null without issue, and is fast for MVP-sized rooms.
-    const allRoomNodes = await this.getNodesByRoom(roomId);
-    return allRoomNodes.filter(node => node.parentId === parentId);
-  }
-
   public async saveNode(node: DataNode): Promise<void> {
     const db = await this.init();
     return new Promise((resolve, reject) => {

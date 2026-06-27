@@ -14,17 +14,21 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
   onSubmit,
 }) => {
   const [folderName, setFolderName] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedName = folderName.trim();
-    if (!trimmedName) return;
+    if (!trimmedName || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       await onSubmit(trimmedName);
       onClose();
     } catch (error) {
       sentryService.captureException(error, { message: 'Failed to create folder from Modal submit', folderName: trimmedName });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -47,6 +51,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
             id="create-folder-name"
             type="text"
             required
+            autoFocus
             autoComplete="off"
             placeholder="Folder name"
             value={folderName}
@@ -64,9 +69,10 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
           </button>
           <button
             type="submit"
-            className="px-5 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/95 transition-colors cursor-pointer"
+            disabled={isSubmitting}
+            className="px-5 py-2 text-sm bg-primary text-primary-foreground font-medium rounded-xl hover:bg-primary/95 disabled:opacity-50 transition-colors cursor-pointer"
           >
-            Create
+            {isSubmitting ? 'Creating...' : 'Create'}
           </button>
         </div>
       </form>
