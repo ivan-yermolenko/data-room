@@ -4,7 +4,7 @@ import { NodeType, type DataNode } from '@/types/dataroom';
 import { dbService } from '@/services/db';
 import { generateUUID } from '@/utils/uuid';
 import { sentryService } from '@/services/sentry';
-import { isDescendant } from '@/utils/nodeHelpers';
+import { isDescendant, updateUrlParams } from '@/utils/nodeHelpers';
 
 export interface NodesSlice {
   nodes: DataNode[];
@@ -64,6 +64,7 @@ export const createNodesSlice: StateCreator<
 
   setCurrentFolder: (folderId) => {
     set({ currentFolderId: folderId });
+    updateUrlParams(get().currentRoomId, folderId);
   },
 
   createFolder: async (name) => {

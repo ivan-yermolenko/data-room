@@ -132,6 +132,16 @@ Moving nodes includes two safety checks:
 1. **Self-reference** — cannot move a node into itself
 2. **Circular reference** — `isDescendant()` walks the parent chain (with cycle protection via `visited` Set) to prevent moving a folder into its own subtree
 
+### URL Routing: History API Sync
+
+Instead of installing a full client-side router (like `react-router-dom`), route state is synchronized directly with URL search parameters (`?room=roomId&folder=folderId`) utilizing the browser's native **History API** (`window.history.pushState`):
+
+**Why this approach:**
+- **Single Source of Truth** — Keeps Zustand store state (`currentRoomId`, `currentFolderId`) as the sole source of truth for the active workspace context, instead of splitting state between route params and store.
+- **Zero Overhead** — Implemented natively using ~50 lines of code without adding heavy routing library dependencies or increasing bundle size.
+- **Deep Linking** — Copying and pasting the URL allows users to directly land inside a specific folder of a specific Dataroom on load.
+- **Browser History Integration** — Binds to the browser's `popstate` event, enabling native "Back" and "Forward" navigation to seamlessly sync back into the Zustand store.
+
 ### Component Architecture
 
 ```

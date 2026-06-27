@@ -31,3 +31,50 @@ export const preventDefaults = (event: { preventDefault: () => void; stopPropaga
   event.preventDefault();
   event.stopPropagation();
 };
+
+/**
+ * Updates URL search parameters reactively using History API.
+ * Keeps history stack clean by checking for identical parameters.
+ * 
+ * @param roomId Active room ID or null
+ * @param folderId Active folder ID or null
+ */
+export const updateUrlParams = (roomId: string | null, folderId: string | null) => {
+  if (typeof window === 'undefined') return;
+
+  const params = new URLSearchParams(window.location.search);
+  
+  if (roomId) {
+    params.set('room', roomId);
+  } else {
+    params.delete('room');
+  }
+
+  if (folderId) {
+    params.set('folder', folderId);
+  } else {
+    params.delete('folder');
+  }
+
+  const newSearch = params.toString();
+  const currentSearch = window.location.search.replace(/^\?/, '');
+
+  if (newSearch !== currentSearch) {
+    const newPath = newSearch ? `?${newSearch}` : window.location.pathname;
+    window.history.pushState(null, '', newPath);
+  }
+};
+
+/**
+ * Reads room and folder parameters from current URL location.
+ * 
+ * @returns Object containing room and folder params
+ */
+export const getUrlParams = (): { roomId: string | null; folderId: string | null } => {
+  if (typeof window === 'undefined') return { roomId: null, folderId: null };
+  const params = new URLSearchParams(window.location.search);
+  return {
+    roomId: params.get('room'),
+    folderId: params.get('folder'),
+  };
+};
